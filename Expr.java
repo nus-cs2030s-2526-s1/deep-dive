@@ -3,6 +3,7 @@ abstract class Expr {
   public static Var Var(String name) { return new Var(name); }
   public static Bin Bin(Expr lhs, Expr rhs, String op) { return new Bin(lhs, rhs, op); }
   public static Un Un(Expr arg, String op) { return new Un(arg, op); }
+  public static Call Call(String name, Expr... expr) { return new Call(name, expr); }
 
   public abstract Val eval(Frame frame);
 
@@ -51,6 +52,10 @@ class Var extends Expr {
   @Override
   public Val eval(Frame frame) {
     return frame.val(this.name);
+  }
+
+  public String name() {
+    return this.name;
   }
 }
 
@@ -133,5 +138,45 @@ class Un extends Expr {
       default:
         throw new RuntimeException("Invalid unary operator `" + this.op + "`");
     }
+  }
+}
+
+// Call <: Expr
+class Call extends Expr {
+  private String name;
+  private Expr[] expr;
+
+  public Call(String name, Expr... expr) {
+    this.name = name;
+    this.expr = expr;
+  }
+
+  @Override
+  public Val eval(Frame frame) {
+    Val[] args = new Val[this.expr.length];
+
+    for (int i = 0; i < this.expr.length; i += 1) {
+      args[i] = this.expr[i].eval(frame);
+    }
+
+    Func func = frame.invoke(name);
+    Frame callFrame = new Frame(func.scope());
+    Var[] params = func.vars();
+    String[] types = func.types();
+
+    // TODO: check type and typecheck
+    //       - params.length == args.length
+    //       - RTT(args[i]) <: CTT(params[i])
+
+    for (int i = 0; i < args.length; i += 1) {
+      callFrame.declare(params[i].name(), types[i],
+          args[i]);
+    }
+
+    Stmt body = func.body();
+    callFrame = body.exec(callFrame);
+    Val res = callFrame.val();
+
+    return res;
   }
 }

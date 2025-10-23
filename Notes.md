@@ -2,30 +2,37 @@
 
 ## Grammar
 
-<EXPR> ::= <EXPR> bop <EXPR>   // Bin <: Expr
-        |  uop <EXPR>          // Un  <: Expr
-        |  <VAL>               // Val <: Expr
-        |  <VAR>               // Var <: Expr
+```
+<EXPR> ::= <EXPR> bop <EXPR>   // Bin  <: Expr
+        |  uop <EXPR>          // Un   <: Expr
+        |  <VAR>(<EXPR>, ...)  // Call <: Expr
+        |  <VAL>               // Val  <: Expr
+        |  <VAR>               // Var  <: Expr
+```
 
 where 'bop' are binary operators
 where 'uop' are unary operators
 where <VAL> are valid values
 where <VAR> are valid variable names
 
-
-<STMT> ::= <TYPE> <VAR> = <EXPR>  // Decl  <: Expr
-        |  <VAR> = <EXPR>         // Assg  <: Expr
+```
+<STMT> ::= <TYPE> <VAR> = <EXPR>  // Decl  <: Stmt
+        |  <VAR> = <EXPR>         // Assg  <: Stmt
         |  if (<EXPR>) {
              <STMT>
            } else {
-             <STMT
-           }                      // If    <: Expr
+             <STMT>
+           }                      // If    <: Stmt
         |  while (<EXPR>) {
              <STMT>
-           }                      // While <: Expr
-        |  (<Stmt>;)*             // Block <: Expr
+           }                      // While <: Stmt
+        |  (<Stmt>;)*             // Block <: Stmt
            // this is zero or more statements
-
+        | <TYPE> <VAR> (<VAR> <TYPE>, ...) {
+            <STMT>
+          }                       // Func  <: Stmt
+        | return <EXPR>;          // Ret   <: Stmt
+```
 
 ## Operations
 

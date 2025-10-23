@@ -6,6 +6,8 @@ abstract class Stmt {
   public static If If(Expr cond, Stmt _then, Stmt _else) { return new If(cond, _then, _else); }
   public static While While(Expr cond, Stmt stmt) { return new While(cond, stmt); }
   public static Block Block(List<Stmt> stmts) { return new Block(stmts); }
+  public static Func Func(String ret, String name, Var[] vars, String[] types, Stmt body) { return new Func(ret, name, vars, types, body); }
+  public static Ret Ret(Expr expr) { return new Ret(expr); }
 
   public abstract Frame exec(Frame frame);
 }
@@ -24,6 +26,10 @@ class Decl extends Stmt {
 
   @Override
   public Frame exec(Frame frame) {
+    if (frame.tag() == Frame.RETURN) {
+      return frame;
+    }
+
     Val val = this.expr.eval(frame);
 
     // TODO:
@@ -48,6 +54,10 @@ class Assg extends Stmt {
 
   @Override
   public Frame exec(Frame frame) {
+    if (frame.tag() == Frame.RETURN) {
+      return frame;
+    }
+    
     Val val = this.expr.eval(frame);
     frame.assign(this.name, val);
     return frame;
@@ -68,6 +78,10 @@ class If extends Stmt {
 
   @Override
   public Frame exec(Frame frame) {
+    if (frame.tag() == Frame.RETURN) {
+      return frame;
+    }
+    
     if (((Boolean)this.cond.eval(frame).val()) == true) {
       this._then.exec(frame);
       return frame;
@@ -94,8 +108,16 @@ class While extends Stmt {
 
   @Override
   public Frame exec(Frame frame) {
+    if (frame.tag() == Frame.RETURN) {
+      return frame;
+    }
+    
     while (((Boolean)this.cond.eval(frame).val()) == true) {
-      this.stmt.exec(frame);
+      frame = this.stmt.exec(frame);
+
+      if (frame.tag() == Frame.RETURN) {
+        return frame;
+      }  
     }
     return frame;
   }
@@ -111,9 +133,80 @@ class Block extends Stmt {
 
   @Override
   public Frame exec(Frame frame) {
-    for (Stmt stmt : stmts) {
-      stmt.exec(frame);
+    if (frame.tag() == Frame.RETURN) {
+      return frame;
     }
+    
+    for (Stmt stmt : stmts) {
+      frame = stmt.exec(frame);
+
+      if (frame.tag() == Frame.RETURN) {
+        return frame;
+      }  
+    }
+    return frame;
+  }
+}
+
+// Func <: Stmt
+class Func extends Stmt {
+  private String ret;
+  private String name;
+  private Var[] vars;
+  private String[] types;
+  private Stmt body;
+  private Frame scope;
+
+  public Func(String ret, String name,
+      Var[] vars, String[] types, Stmt body) {
+    this.ret = ret;
+    this.name = name;
+    this.vars = vars;
+    this.types = types;
+    this.body = body;
+    this.scope = null;
+  }
+
+  @Override
+  public Frame exec(Frame frame) {
+    this.scope = frame;
+    frame.define(this.name, this);
+    return frame;
+  }
+  
+  public Var[] vars() {
+    return this.vars;
+  }
+
+  public String[] types() {
+    return this.types;
+  }
+
+  public Stmt body() {
+    return this.body;
+  }
+
+  public Frame scope() {
+    return this.scope;
+  }
+}
+
+// Ret <: Stmt
+class Ret extends Stmt {
+  private Expr expr;
+
+  public Ret(Expr expr) {
+    this.expr = expr;
+  }
+
+  @Override
+  public Frame exec(Frame frame) {
+    if (frame.tag() == Frame.RETURN) {
+      return frame;
+    }
+    
+    Val res = this.expr.eval(frame);
+    frame.ret(res);
     return frame;
   }
 }
